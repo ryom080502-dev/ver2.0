@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Python & Local env
+.env
+.venv/
+__pycache__/
+*.xlsx
+!template.xlsx

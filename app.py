@@ -14,7 +14,7 @@ MODEL_NAME = "gemini-2.5-flash"
 TEMPLATE_FILE = "template.xlsx"
 
 # ▼▼▼ 合言葉の設定（ここを変更してください） ▼▼▼
-LOGIN_PASSWORD = "secret_pass" 
+LOGIN_PASSWORD = "fujishima8888" 
 # ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
 # --- ページ設定 ---
