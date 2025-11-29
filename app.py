@@ -88,7 +88,7 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 
         sample_file = genai.upload_file(path=temp_pdf_path, display_name="User Upload PDF")
         
-        with st.spinner('🤖 AIがレシートを解析中... (Googleサーバーで処理しています)'):
+        with st.spinner('🤖 レシートを読み込んでいます (自動入力中)'):
             while sample_file.state.name == "PROCESSING":
                 time.sleep(1)
                 sample_file = genai.get_file(sample_file.name)
@@ -130,7 +130,7 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 # --- メイン処理 ---
 if check_password():
     # 認証OKの場合のみここを表示
-    st.title("🧾 経費精算 自動化ツール")
+    st.title("🧾 経費精算 自動入力アプリ")
     st.markdown("---")
 
     col1, col2 = st.columns([1, 1.5])
@@ -140,10 +140,10 @@ if check_password():
         uploaded_file = st.file_uploader("レシートPDFをアップロード", type=["pdf"])
         
         if uploaded_file is not None:
-            st.success("ファイルセット完了！")
+            st.success("ファイル選択済み")
             st.write("")
-            st.subheader("🚀 2. 解析実行")
-            if st.button("AI解析スタート", type="primary", use_container_width=True):
+            st.subheader("🚀 2. 実行")
+            if st.button("読み取りを開始", type="primary", use_container_width=True):
                 
                 temp_excel_path = "result_download.xlsx"
                 if os.path.exists(TEMPLATE_FILE):
@@ -155,7 +155,7 @@ if check_password():
                     st.error(f"テンプレート ({TEMPLATE_FILE}) が見つかりません。")
 
     with col2:
-        st.subheader("📊 3. 解析結果プレビュー")
+        st.subheader("📊 3. 結果プレビュー")
         if 'result_data' in st.session_state:
             data = st.session_state['result_data']
             
@@ -171,11 +171,11 @@ if check_password():
             if 'excel_ready' in st.session_state:
                 with open("result_download.xlsx", "rb") as f:
                     st.download_button(
-                        label="📥 完成したExcelをダウンロード",
+                        label=" 経費精算書をダウンロード",
                         data=f,
                         file_name=f"経費精算_{os.path.basename('result_download.xlsx')}",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         type="primary"
                     )
         else:
-            st.info("👈 左側のボタンを押して解析を開始してください。")
+            st.info("👈 左側のボタンを押して読み取りを開始してください。")
