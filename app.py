@@ -138,15 +138,15 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
         for i, item in enumerate(receipt_data):
             row_num = start_row + i
             if item.get("date"): ws.cell(row=row_num, column=2).value = item["date"]
-            if item.get("store_name"): ws.cell(row=row_num, column=3).value = item["store_name"]
+            if item.get("store_name"): ws.cell(row=row_num, column=5).value = item["store_name"]
             
             amt_8 = item.get("amount_8_percent") or 0
             amt_10 = item.get("amount_10_percent") or 0
             amt_other = item.get("amount_non_invoice") or 0
 
             total_8_zone = amt_8 + amt_other
-            if total_8_zone > 0: ws.cell(row=row_num, column=6).value = total_8_zone
-            if amt_10 > 0: ws.cell(row=row_num, column=7).value = amt_10
+            if total_8_zone > 0: ws.cell(row=row_num, column=16).value = total_8_zone
+            if amt_10 > 0: ws.cell(row=row_num, column=19).value = amt_10
 
         wb.save(output_excel_path)
         return receipt_data
