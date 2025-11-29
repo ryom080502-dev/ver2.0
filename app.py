@@ -20,6 +20,34 @@ LOGIN_PASSWORD = "fujishima8888"
 # --- ページ設定 ---
 st.set_page_config(page_title="経費精算AI", layout="wide")
 
+# ▼▼▼ 追加: ファイルアップローダーの英語を無理やり日本語にするCSS ▼▼▼
+st.markdown("""
+    <style>
+    /* 元の「Drag and drop...」という文字を消す */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > span {
+        display: none;
+    }
+    /* 新しい日本語の文字を表示する */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
+        content: "ファイルをドラッグまたは選択";
+        font-weight: bold;
+        font-size: 1rem;
+    }
+    /* 元の「Limit 200MB...」という文字を消す */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > small {
+        display: none;
+    }
+    /* 新しい容量制限の文字を表示する */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::before {
+        content: "上限 200MB / PDFのみ";
+        font-size: 0.8rem;
+        display: block;
+        margin-bottom: 5px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+# ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 # --- 認証機能 (簡易ログイン) ---
 def check_password():
     """パスワード認証が成功したらTrueを返す"""
@@ -88,7 +116,7 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 
         sample_file = genai.upload_file(path=temp_pdf_path, display_name="User Upload PDF")
         
-        with st.spinner('🤖 レシートを読み込んでいます (自動入力中)'):
+        with st.spinner(' レシートを読み込んでいます (自動入力中)'):
             while sample_file.state.name == "PROCESSING":
                 time.sleep(1)
                 sample_file = genai.get_file(sample_file.name)
