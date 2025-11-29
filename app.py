@@ -116,7 +116,7 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 
         sample_file = genai.upload_file(path=temp_pdf_path, display_name="User Upload PDF")
         
-        with st.spinner(' レシートを読み込んでいます (自動入力中)'):
+        with st.spinner(' レシートを読み込んでいます (数分かかる場合があります)'):
             while sample_file.state.name == "PROCESSING":
                 time.sleep(1)
                 sample_file = genai.get_file(sample_file.name)
