@@ -1,0 +1,5 @@
+{
+  "name": "AI Accounting Assistant",
+  "description": "An intelligent invoice and receipt scanner that parses PDF files, identifies tax rates (8%/10%), checks for Invoice System compliance, and outputs structured JSON data.",
+  "requestFramePermissions": []
+}
