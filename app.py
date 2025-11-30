@@ -3,7 +3,7 @@ import json
 import time
 import pandas as pd
 import openpyxl
-from openpyxl.cell.cell import MergedCell # 追加: 結合判定用
+from openpyxl.cell.cell import MergedCell
 import streamlit as st
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -58,22 +58,15 @@ def check_password():
             st.error("パスワードが違います")
     return False
 
-# --- ★追加: 結合セルでも安全に書き込むための魔法の関数 ---
+# --- 結合セル対応の書き込み関数 ---
 def smart_write(ws, row, col, value):
-    """
-    指定されたセルが結合セルの一部だった場合、自動的に左上の親セルを探して書き込む
-    """
     cell = ws.cell(row=row, column=col)
-    
-    # もし結合セルの「中身（ReadOnly）」だった場合
     if isinstance(cell, MergedCell):
         for merged_range in ws.merged_cells.ranges:
             if cell.coordinate in merged_range:
-                # その結合範囲の「左上（min_row, min_col）」を取得してそこに書き込む
                 ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
                 return
     else:
-        # 普通のセルの場合はそのまま書き込む
         cell.value = value
 
 # --- メインロジック関数 ---
@@ -138,17 +131,26 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 
         wb = openpyxl.load_workbook(template_path)
         ws = wb.active 
-        start_row = 9
-
+        
+        # ▼▼▼ 修正箇所: 行番号の計算ロジックを変更 ▼▼▼
+        # 9行目～29行目 = 21行分 (インデックス0～20)
+        # 41行目～      = それ以降 (インデックス21～)
+        
         for i, item in enumerate(receipt_data):
-            row_num = start_row + i
-            
-            # --- 修正: smart_write関数を使って書き込む ---
+            if i <= 20:
+                # 1ページ目 (0~20件目) -> 9行目スタート
+                row_num = 9 + i
+            else:
+                # 2ページ目 (21件目以降) -> 41行目スタート
+                # 例: i=21のとき、41 + (21-21) = 41行目
+                row_num = 41 + (i - 21)
+
+            # --- ここから書き込み処理 ---
             if item.get("date"): 
                 smart_write(ws, row_num, 2, item["date"])
             
             if item.get("store_name"): 
-                smart_write(ws, row_num, 5, item["store_name"]) # C5付近
+                smart_write(ws, row_num, 5, item["store_name"]) 
             
             amt_8 = item.get("amount_8_percent") or 0
             amt_10 = item.get("amount_10_percent") or 0
@@ -156,10 +158,10 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
 
             total_8_zone = amt_8 + amt_other
             if total_8_zone > 0: 
-                smart_write(ws, row_num, 16, total_8_zone) # C16付近
+                smart_write(ws, row_num, 16, total_8_zone) 
             
             if amt_10 > 0: 
-                smart_write(ws, row_num, 19, amt_10) # C19付近
+                smart_write(ws, row_num, 19, amt_10)
 
         wb.save(output_excel_path)
         return receipt_data
