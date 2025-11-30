@@ -3,6 +3,7 @@ import json
 import time
 import pandas as pd
 import openpyxl
+from openpyxl.cell.cell import MergedCell # 追加: 結合判定用
 import streamlit as st
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -20,10 +21,9 @@ LOGIN_PASSWORD = "fujishima8888"
 # --- ページ設定 ---
 st.set_page_config(page_title="経費精算AI", layout="wide")
 
-# ▼▼▼ CSSスタイル (ファイル選択の日本語化 ＋ カード風デザイン) ▼▼▼
+# ▼▼▼ CSSスタイル ▼▼▼
 st.markdown("""
     <style>
-    /* 1. ファイルアップローダーの日本語化 */
     [data-testid="stFileUploaderDropzoneInstructions"] > div > span {display: none;}
     [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
         content: "ファイルをドラッグまたは選択"; font-weight: bold; font-size: 1rem;
@@ -32,20 +32,11 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] > div::before {
         content: "上限 200MB / PDFのみ"; font-size: 0.8rem; display: block; margin-bottom: 5px;
     }
-    
-    /* 2. 指標カード(Metric)のデザイン調整 */
     [data-testid="stMetric"] {
-        background-color: #f0f2f6;
-        padding: 15px;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
+        background-color: #f0f2f6; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0;
     }
-    /* ダークモード対策 */
     @media (prefers-color-scheme: dark) {
-        [data-testid="stMetric"] {
-            background-color: #262730;
-            border: 1px solid #41444e;
-        }
+        [data-testid="stMetric"] { background-color: #262730; border: 1px solid #41444e; }
     }
     </style>
 """, unsafe_allow_html=True)
@@ -66,6 +57,24 @@ def check_password():
         else:
             st.error("パスワードが違います")
     return False
+
+# --- ★追加: 結合セルでも安全に書き込むための魔法の関数 ---
+def smart_write(ws, row, col, value):
+    """
+    指定されたセルが結合セルの一部だった場合、自動的に左上の親セルを探して書き込む
+    """
+    cell = ws.cell(row=row, column=col)
+    
+    # もし結合セルの「中身（ReadOnly）」だった場合
+    if isinstance(cell, MergedCell):
+        for merged_range in ws.merged_cells.ranges:
+            if cell.coordinate in merged_range:
+                # その結合範囲の「左上（min_row, min_col）」を取得してそこに書き込む
+                ws.cell(row=merged_range.min_row, column=merged_range.min_col).value = value
+                return
+    else:
+        # 普通のセルの場合はそのまま書き込む
+        cell.value = value
 
 # --- メインロジック関数 ---
 def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
@@ -134,17 +143,23 @@ def analyze_and_create_excel(uploaded_file, template_path, output_excel_path):
         for i, item in enumerate(receipt_data):
             row_num = start_row + i
             
-            # --- ユーザー指定の出力先設定 ---
-            if item.get("date"): ws.cell(row=row_num, column=2).value = item["date"]
-            if item.get("store_name"): ws.cell(row=row_num, column=5).value = item["store_name"] # C5
+            # --- 修正: smart_write関数を使って書き込む ---
+            if item.get("date"): 
+                smart_write(ws, row_num, 2, item["date"])
+            
+            if item.get("store_name"): 
+                smart_write(ws, row_num, 5, item["store_name"]) # C5付近
             
             amt_8 = item.get("amount_8_percent") or 0
             amt_10 = item.get("amount_10_percent") or 0
             amt_other = item.get("amount_non_invoice") or 0
 
             total_8_zone = amt_8 + amt_other
-            if total_8_zone > 0: ws.cell(row=row_num, column=16).value = total_8_zone # C16
-            if amt_10 > 0: ws.cell(row=row_num, column=19).value = amt_10 # C19
+            if total_8_zone > 0: 
+                smart_write(ws, row_num, 16, total_8_zone) # C16付近
+            
+            if amt_10 > 0: 
+                smart_write(ws, row_num, 19, amt_10) # C19付近
 
         wb.save(output_excel_path)
         return receipt_data
@@ -158,7 +173,7 @@ if check_password():
     st.title("🧾 経費精算 自動入力アプリ")
     st.markdown("---")
 
-    col1, col2 = st.columns([1, 2.5]) # 右側を広くする
+    col1, col2 = st.columns([1, 2.5])
 
     with col1:
         st.subheader("📂 1. ファイル選択")
@@ -178,7 +193,6 @@ if check_password():
                 else:
                     st.error(f"テンプレート ({TEMPLATE_FILE}) が見つかりません。")
             
-            # ダウンロードボタンをここに配置
             if 'excel_ready' in st.session_state:
                 st.write("")
                 st.write("---")
@@ -193,12 +207,11 @@ if check_password():
                     )
 
     with col2:
-        st.subheader("📊 3. 解析結果ダッシュボード")
+        st.subheader("📊 解析結果ダッシュボード")
         
         if 'result_data' in st.session_state:
             data = st.session_state['result_data']
             
-            # --- 1. カード集計 ---
             total_10 = sum([d.get("amount_10_percent", 0) for d in data])
             total_8 = sum([d.get("amount_8_percent", 0) for d in data])
             total_other = sum([d.get("amount_non_invoice", 0) for d in data])
@@ -212,11 +225,9 @@ if check_password():
 
             st.write("")
 
-            # --- 2. データ整形 ---
             df = pd.DataFrame(data)
             df["total_amount"] = df.apply(lambda x: x.get("amount_10_percent", 0) + x.get("amount_8_percent", 0) + x.get("amount_non_invoice", 0), axis=1)
             
-            # インボイス判定列の作成
             def format_invoice(row):
                 num = row.get("invoice_number")
                 if num and str(num).startswith("T") and len(str(num)) >= 13:
@@ -226,7 +237,6 @@ if check_password():
             
             df["invoice_status"] = df.apply(format_invoice, axis=1)
 
-            # 表示用データの作成
             df_display = df[[
                 "date", "store_name", "total_amount", "invoice_status", 
                 "amount_10_percent", "amount_8_percent", "amount_non_invoice"
@@ -240,7 +250,6 @@ if check_password():
                 "amount_non_invoice": "対象外/不明"
             })
 
-            # --- 3. 高機能テーブル表示 ---
             st.dataframe(
                 df_display,
                 use_container_width=True,
@@ -256,7 +265,6 @@ if check_password():
 
         else:
             st.info("👈 左側のボタンを押して読み取りを開始してください。")
-            # ダミー表示
             cols = st.columns(4)
             for c in cols: c.metric("---", "---")
             st.dataframe(pd.DataFrame({"日付":[], "店舗名":[], "支払総額":[]}), use_container_width=True)
